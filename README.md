@@ -1,2 +1,123 @@
-# ai-based-automated-test-generation
+# AI-Based Automated Test Generation from Test Management Platforms
+
 AI-powered framework that converts manual test cases into executable automation scripts integrated directly into enterprise test automation frameworks.
+
+Works with qTest out of the box and with any other test management platform like Azure Test Plans, CSV exports through adapter.
+
+## Problem statement
+
+Organizations maintain thousands of manual test cases in test management systems such as qTest.  Converting these test cases into maintainable automation scripts requires significant engineering effort and often becomes a bottleneck for automation adoption.
+
+Generic AI assistants only partially solve this.  Asked to "automate this test case", an assistant usually produces a standalone file that compiles but ignores the target repository: it re-implements page objects that already exist, invents helper methods, drops traceability to the source test case, and creates one new spec file per test case.  That output looks like automation while increasing long-term maintenance cost.
+
+## Innovation
+
+This project introduces an AI-assisted workflow that transforms structured test cases into executable automation scripts *inside your existing framework*.  Two things make the difference:
+
+1. **Repository-grounded context.** Before generating anything, the toolkit detects your test framework, inventories your test files (suite names, test names, imports, detected patterns) and discovers your page objects, helpers, models and fixtures.  The AI receives that inventory, so it puts the new test in an existing suite and reuses abstractions that already exists.
+
+2. **A staged prompt chain with human checkpoints.** The work is split into analyze, generate, integrate, and review-and-run.  Each stage produces a small reviewable artifact, so a wrong decision is caught in seconds instead of in code review.
+
+The solution analyzes test case artifacts and generates test implementations compatible with existing automation frameworks such as Cucumber, Cypress, Playwright, TestCafe and so on.
+
+## Repository structure
+
+```
+ai-based-automated-test-generation
+├── README.md
+├── architecture
+│   └── architecture-diagram.png
+├── scripts
+│   ├── Get-QTestCase.ps1               Fetch and normalize a test case from qTest
+│   └── Generate-AiPrompts.ps1          Analyze the repository and build the prompt 
+├── prompts
+│   └── test-generation-prompts.md      Prompt templates and the rationale for each stage
+├── examples
+    └── sample-qtest-case.json          Normalized test case (input)
+```
+
+## Supported frameworks
+
+Detection is automatic, based on dependencies, config files, project files and source evidence.
+
+|Framework   |Language            |Detected via                          |
+|------------|--------------------|--------------------------------------|
+| Playwright | TypeScript / JavaScript | `@playwright/test`, `playwright.config.*` |
+| Cucumber / Gherkin   | Java / JavaScript  | `cucumber`, `*.feature` files        |
+| MSTest / NUnit / xUnit     | C#                 | `.csproj`    |
+| Pytest     | Python             | `pytest.ini`, `import pytest`, `import unittest`              |
+| Generic    | Any                | Fallback to directory structure and file patterns |
+
+## Prerequisites
+
+- PowerShell 5.1 or later (Windows PowerShell or PowerShell 7+)
+- Network access to your test management platform
+- An API token for that platform
+- An AI coding assistant: GitHub Copilot Chat, Claude Code, or any chat assistant
+
+## Configuration
+
+Connection settings are read from parameters or environment variables. Nothing instance-specific is stored in the repository.
+
+```powershell
+$env:QTEST_BASE_URL     = 'https://yourorg.qtest.com'
+$env:QTEST_TOKEN        = 'Bearer <your api token>'
+$env:QTEST_PROJECT_ID   = '12345'
+```
+
+> **Never commit tokens.** Use environment variables, a secret manager or your CI provider's secret store.
+
+## Quick start
+
+```powershell
+# 1. Fetch the test case and normalize it to JSON
+.\scripts\Get-QTestCase.ps1 -TcNumber TC-1234 -SaveToFile
+#   -> test-resources/sample-test-cases/tc-1234.json
+
+# 2. Analyze the target repository and build the prompt chain
+.\scripts\Generate-AiPrompts.ps1 -TcNumber TC-1234 -ProjectPath "C:\path\to\your\test-repo"
+#   -> ai-prompts\tc-1234-prompts.md
+
+# 3. Open ai-prompts\tc-1234-prompts.md and send the prompts to your AI assistant
+#    in order, reviewing the output of each stage:
+#       PROMPT 1 analyze        -> confirm the target file and reusable components
+#       PROMPT 2 generate       -> review the test logic and assertions
+#       PROMPT 3 integrate      -> review the diff
+#       PROMPT 4 validate       -> the assistant runs the test and fixes failures
+
+# 4. Run the test yourself before committing.
+```
+
+No test management access? Copy [`examples/sample-qtest-case.json`](examples/sample-qtest-case.json) to `test-resources/sample-test-cases/tc-1234.json` and start at step 2.
+
+## How it works
+
+### 1. Extract
+
+`Get-QTestCase.ps1` resolves test test case number to the platform`s internal ID (via the search API, or an optional id-map file), fetches the test case and its steps, strips rich-text markup and extracts precondition key/value pairs.  The output is a framework-neutral JSON document.
+
+### 2. Analyze
+
+`Generate-AiPrompts.ps1` inspects the target repository:
+
+- **Framework detection** from dependencies, config files, project files and imports
+- **Test file inventory**: suite/class names, test names, test counts, imports, file size
+- **Pattern classification**: authentication, CRUD, UI components, navigation, validation, API integration, data operations, user interaction, search/filter, error handling
+- **Support file discovery**: page objects, components, helpers, utilities,models, fixtures, config
+
+### 3. Generate through a staged prompt chain
+
+The AI generates test scripts in a staged process:
+
+1. **Analyze**: The repository structure and test case are analyzed to determine the appropriate framework and patterns.
+2. **Generate**: Prompts are created for each stage of the test case, ensuring compatibility with the existing framework.
+3. **Integrate**: The generated test is integrated into the appropriate suite or file, reusing existing abstractions like page objects and helpers.
+4. **Review and Run**: The generated test is presented for human review, and once approved, it can be executed within the existing framework.
+
+### 4. Review and refine
+
+Each stage produces a small, reviewable artifact. This ensures that any errors or misinterpretations are caught early in the process, reducing the risk of introducing unmaintainable code.
+
+---
+
+This workflow ensures that the generated tests are maintainable, traceable, and seamlessly integrated into the existing automation framework, reducing long-term maintenance costs and accelerating automation adoption.
