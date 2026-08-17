@@ -50,13 +50,14 @@ function Get-TestCaseFilePath {
     $defaultPath = Join-Path $RepoRoot "test-resources\sample-test-cases\$fileName"
     if (Test-Path -LiteralPath $defaultPath) { return $defaultPath }
 
-    $examplePath = Join-Path $RepoRoot 'examples\sample-qtest-case.json'
-    if (Test-Path -LiteralPath $examplePath) {
-        Write-Warning "Test case file not found at $defaultPath. Using example: $examplePath"
-        return $examplePath
-    }
+    throw @"
+Test case JSON not found at: $defaultPath
 
-    throw "Test case JSON not found. Run Get-QTestCase.ps1 -SaveToFile or copy examples/sample-qtest-case.json."
+Run Get-QTestCase.ps1 -TcNumber $Number -SaveToFile, or copy examples/sample-qtest-case.json to:
+  test-resources/sample-test-cases/$fileName
+
+Use -TestCasePath to point at a specific JSON file.
+"@
 }
 
 function Read-JsonFile {

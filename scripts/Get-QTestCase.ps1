@@ -94,17 +94,51 @@ function Invoke-QTestApi {
     param(
         [string]$BaseUrl,
         [hashtable]$Headers,
-        [string]$RelativePath
+        [string]$RelativePath,
+        [ValidateSet('Get', 'Post')]
+        [string]$Method = 'Get',
+        [object]$Body = $null
     )
 
     $uri = "$($BaseUrl.TrimEnd('/'))$RelativePath"
     try {
-        return Invoke-RestMethod -Uri $uri -Headers $Headers -Method Get
+        $params = @{
+            Uri     = $uri
+            Headers = $Headers
+            Method  = $Method
+        }
+        if ($null -ne $Body) {
+            $params.Body = ($Body | ConvertTo-Json -Compress -Depth 5)
+            $params.ContentType = 'application/json'
+        }
+        return Invoke-RestMethod @params
     }
     catch {
-        $status = $_.Exception.Response.StatusCode.value__
+        $status = 'n/a'
+        if ($null -ne $_.Exception.Response) {
+            $status = $_.Exception.Response.StatusCode.value__
+        }
         throw "qTest API request failed ($status) for $uri`: $($_.Exception.Message)"
     }
+}
+
+function Get-QTestSearchItems {
+    param($SearchResult)
+    if ($null -eq $SearchResult) { return @() }
+    if ($SearchResult.items) { return @($SearchResult.items) }
+    if ($SearchResult -is [System.Array]) { return @($SearchResult) }
+    return @()
+}
+
+function Find-QTestCaseMatch {
+    param(
+        [array]$Items,
+        [string]$TcNumber
+    )
+
+    return $Items | Where-Object {
+        $_.pid -eq $TcNumber -or $_.name -eq $TcNumber -or $_.name -like "*$TcNumber*"
+    } | Select-Object -First 1
 }
 
 function Resolve-QTestCaseId {
@@ -116,28 +150,39 @@ function Resolve-QTestCaseId {
         [string]$IdMapPath
     )
 
-    if ($IdMapPath -and (Test-Path -LiteralPath $IdMapPath)) {
-        $map = Get-Content -LiteralPath $IdMapPath -Raw | ConvertFrom-Json
-        $prop = $map.PSObject.Properties | Where-Object { $_.Name -eq $TcNumber } | Select-Object -First 1
-        if ($prop) {
-            Write-Verbose "Resolved $TcNumber to id $($prop.Value) via id-map."
-            return [long]$prop.Value
+    if ($IdMapPath) {
+        if (Test-Path -LiteralPath $IdMapPath) {
+            $map = Get-Content -LiteralPath $IdMapPath -Raw | ConvertFrom-Json
+            $prop = $map.PSObject.Properties | Where-Object { $_.Name -eq $TcNumber } | Select-Object -First 1
+            if ($prop) {
+                Write-Verbose "Resolved $TcNumber to id $($prop.Value) via id-map."
+                return [long]$prop.Value
+            }
+            Write-Warning "Test case '$TcNumber' not found in id-map '$IdMapPath'. Falling back to qTest search API."
+        }
+        else {
+            Write-Warning "Id-map file not found at '$IdMapPath'. Falling back to qTest search API."
         }
     }
 
-    $encodedQuery = [uri]::EscapeDataString("name~'$TcNumber'")
-    $searchPath = "/api/v3/projects/$ProjectId/search?objectType=test-cases&pageSize=20&query=$encodedQuery"
-    $searchResult = Invoke-QTestApi -BaseUrl $BaseUrl -Headers $Headers -RelativePath $searchPath
+    $searchPath = "/api/v3/projects/$ProjectId/search"
+    $searchQueries = @(
+        "'id' = '$TcNumber'"
+        "Name ~ `"$TcNumber`""
+    )
 
-    $items = @()
-    if ($searchResult.items) { $items = @($searchResult.items) }
-    elseif ($searchResult -is [System.Collections.IEnumerable] -and $searchResult -isnot [string]) {
-        $items = @($searchResult)
+    $match = $null
+    foreach ($query in $searchQueries) {
+        $searchBody = @{
+            object_type = 'test-cases'
+            fields      = @('*')
+            query       = $query
+        }
+        $searchResult = Invoke-QTestApi -BaseUrl $BaseUrl -Headers $Headers -RelativePath $searchPath -Method Post -Body $searchBody
+        $items = Get-QTestSearchItems -SearchResult $searchResult
+        $match = Find-QTestCaseMatch -Items $items -TcNumber $TcNumber
+        if ($match) { break }
     }
-
-    $match = $items | Where-Object {
-        $_.name -eq $TcNumber -or $_.pid -eq $TcNumber -or $_.name -like "*$TcNumber*"
-    } | Select-Object -First 1
 
     if (-not $match) {
         throw "Could not resolve test case '$TcNumber'. Provide -IdMapPath or verify QTEST_* settings."
@@ -174,11 +219,14 @@ function Get-NormalizedTestCase {
     $steps = @()
     $rawSteps = @()
     if ($stepsResponse) {
-        if ($stepsResponse -is [System.Collections.IEnumerable] -and $stepsResponse -isnot [string]) {
+        if ($stepsResponse.items) {
+            $rawSteps = @($stepsResponse.items)
+        }
+        elseif ($stepsResponse -is [System.Array]) {
             $rawSteps = @($stepsResponse)
         }
-        elseif ($stepsResponse.items) {
-            $rawSteps = @($stepsResponse.items)
+        elseif ($stepsResponse -is [System.Collections.IEnumerable] -and $stepsResponse -isnot [string]) {
+            $rawSteps = @($stepsResponse)
         }
     }
 
@@ -195,7 +243,8 @@ function Get-NormalizedTestCase {
     $status = $null
     if ($testCase.properties) {
         foreach ($prop in $testCase.properties) {
-            switch -Regex ($prop.field_name) {
+            $fieldName = $prop.field_name.ToLower()
+            switch ($fieldName) {
                 'priority' { $priority = $prop.field_value }
                 'type' { $type = $prop.field_value }
                 'status' { $status = $prop.field_value }

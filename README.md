@@ -65,6 +65,13 @@ $env:QTEST_TOKEN        = 'Bearer <your api token>'
 $env:QTEST_PROJECT_ID   = '12345'
 ```
 
+Optional: map test case numbers to qTest internal IDs when search is unavailable or unreliable:
+
+```powershell
+# id-map.json format: { "TC-1234": 98765, "TC-5678": 12345 }
+.\scripts\Get-QTestCase.ps1 -TcNumber TC-1234 -SaveToFile -IdMapPath .\id-map.json
+```
+
 > **Never commit tokens.** Use environment variables, a secret manager or your CI provider's secret store.
 
 ## Quick start
@@ -75,6 +82,7 @@ $env:QTEST_PROJECT_ID   = '12345'
 #   -> test-resources/sample-test-cases/tc-1234.json
 
 # 2. Analyze the target repository and build the prompt chain
+#    (requires test-resources/sample-test-cases/tc-1234.json from step 1 or the offline copy below)
 .\scripts\Generate-AiPrompts.ps1 -TcNumber TC-1234 -ProjectPath "C:\path\to\your\test-repo"
 #   -> ai-prompts\tc-1234-prompts.md
 
@@ -88,13 +96,20 @@ $env:QTEST_PROJECT_ID   = '12345'
 # 4. Run the test yourself before committing.
 ```
 
-No test management access? Copy [`examples/sample-qtest-case.json`](examples/sample-qtest-case.json) to `test-resources/sample-test-cases/tc-1234.json` and start at step 2.
+No test management access? Copy [`examples/sample-qtest-case.json`](examples/sample-qtest-case.json) to `test-resources/sample-test-cases/tc-1234.json` (create the folder if needed) and start at step 2. Step 2 fails if that file is missing for the given `-TcNumber`.
+
+Alternatively, pass the JSON path directly:
+
+```powershell
+.\scripts\Generate-AiPrompts.ps1 -TcNumber TC-1234 -ProjectPath "C:\path\to\your\test-repo" `
+  -TestCasePath "examples\sample-qtest-case.json"
+```
 
 ## How it works
 
 ### 1. Extract
 
-`Get-QTestCase.ps1` resolves test test case number to the platform`s internal ID (via the search API, or an optional id-map file), fetches the test case and its steps, strips rich-text markup and extracts precondition key/value pairs.  The output is a framework-neutral JSON document.
+`Get-QTestCase.ps1` resolves the test case number to the platform's internal ID (via the qTest search API by PID, or an optional id-map file), fetches the test case and its steps, strips rich-text markup and extracts precondition key/value pairs.  The output is a framework-neutral JSON document.
 
 ### 2. Analyze
 
@@ -103,7 +118,7 @@ No test management access? Copy [`examples/sample-qtest-case.json`](examples/sam
 - **Framework detection** from dependencies, config files, project files and imports
 - **Test file inventory**: suite/class names, test names, test counts, imports, file size
 - **Pattern classification**: authentication, CRUD, UI components, navigation, validation, API integration, data operations, user interaction, search/filter, error handling
-- **Support file discovery**: page objects, components, helpers, utilities,models, fixtures, config
+- **Support file discovery**: page objects, components, helpers, utilities, models, fixtures, config
 
 ### 3. Generate through a staged prompt chain
 
