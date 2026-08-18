@@ -2,7 +2,7 @@
 
 AI-powered framework that converts manual test cases into executable automation scripts integrated directly into enterprise test automation frameworks.
 
-Works with qTest out of the box and with any other test management platform like Azure Test Plans, CSV exports through adapter.
+Works with qTest and Azure DevOps Test Plans out of the box, and with any other test management platform through CSV exports or adapter scripts.
 
 ## Problem statement
 
@@ -29,11 +29,13 @@ ai-based-automated-test-generation
 │   └── architecture-diagram.png
 ├── scripts
 │   ├── Get-QTestCase.ps1               Fetch and normalize a test case from qTest
-│   └── Generate-AiPrompts.ps1          Analyze the repository and build the prompt 
+│   ├── Get-AzureTestCase.ps1           Fetch and normalize a test case from Azure DevOps
+│   └── Generate-AiPrompts.ps1          Analyze the repository and build the prompt chain
 ├── prompts
 │   └── test-generation-prompts.md      Prompt templates and the rationale for each stage
 ├── examples
-    └── sample-qtest-case.json          Normalized test case (input)
+│   ├── sample-qtest-case.json          Normalized qTest sample (offline input)
+│   └── sample-azure-test-case.json     Normalized Azure DevOps sample (offline input)
 ```
 
 ## Supported frameworks
@@ -59,6 +61,8 @@ Detection is automatic, based on dependencies, config files, project files and s
 
 Connection settings are read from parameters or environment variables. Nothing instance-specific is stored in the repository.
 
+### qTest
+
 ```powershell
 $env:QTEST_BASE_URL     = 'https://yourorg.qtest.com'
 $env:QTEST_TOKEN        = 'Bearer <your api token>'
@@ -72,13 +76,33 @@ Optional: map test case numbers to qTest internal IDs when search is unavailable
 .\scripts\Get-QTestCase.ps1 -TcNumber TC-1234 -SaveToFile -IdMapPath .\id-map.json
 ```
 
+### Azure DevOps Test Plans
+
+```powershell
+$env:AZURE_DEVOPS_ORG_URL  = 'https://dev.azure.com/yourorg'
+$env:AZURE_DEVOPS_PAT       = '<personal-access-token>'
+$env:AZURE_DEVOPS_PROJECT   = 'YourProject'
+```
+
+Optional: map test case numbers to Azure DevOps work item IDs, or set a custom precondition field name:
+
+```powershell
+# id-map.json format: { "TC-1234": 12345, "TC-5678": 67890 }
+.\scripts\Get-AzureTestCase.ps1 -TcNumber TC-1234 -SaveToFile -IdMapPath .\id-map.json
+
+# When preconditions are stored in a custom work item field:
+$env:AZURE_DEVOPS_PRECONDITION_FIELD = 'Custom.Preconditions'
+```
+
 > **Never commit tokens.** Use environment variables, a secret manager or your CI provider's secret store.
 
 ## Quick start
 
 ```powershell
-# 1. Fetch the test case and normalize it to JSON
+# 1. Fetch the test case and normalize it to JSON (choose your platform)
 .\scripts\Get-QTestCase.ps1 -TcNumber TC-1234 -SaveToFile
+# or
+.\scripts\Get-AzureTestCase.ps1 -TcNumber TC-1234 -SaveToFile
 #   -> test-resources/sample-test-cases/tc-1234.json
 
 # 2. Analyze the target repository and build the prompt chain
@@ -96,7 +120,7 @@ Optional: map test case numbers to qTest internal IDs when search is unavailable
 # 4. Run the test yourself before committing.
 ```
 
-No test management access? Copy [`examples/sample-qtest-case.json`](examples/sample-qtest-case.json) to `test-resources/sample-test-cases/tc-1234.json` (create the folder if needed) and start at step 2. Step 2 fails if that file is missing for the given `-TcNumber`.
+No test management access? Copy [`examples/sample-qtest-case.json`](examples/sample-qtest-case.json) or [`examples/sample-azure-test-case.json`](examples/sample-azure-test-case.json) to `test-resources/sample-test-cases/tc-1234.json` (create the folder if needed) and start at step 2. Step 2 fails if that file is missing for the given `-TcNumber`.
 
 Alternatively, pass the JSON path directly:
 
@@ -109,7 +133,7 @@ Alternatively, pass the JSON path directly:
 
 ### 1. Extract
 
-`Get-QTestCase.ps1` resolves the test case number to the platform's internal ID (via the qTest search API by PID, or an optional id-map file), fetches the test case and its steps, strips rich-text markup and extracts precondition key/value pairs.  The output is a framework-neutral JSON document.
+`Get-QTestCase.ps1` and `Get-AzureTestCase.ps1` resolve a test case number to the platform's internal ID (qTest search API or PID, Azure DevOps WIQL search or work item ID, or an optional id-map file), fetch the test case and its steps, strip rich-text markup, and extract precondition key/value pairs. Both scripts produce the same framework-neutral JSON document so `Generate-AiPrompts.ps1` can consume either source.
 
 ### 2. Analyze
 

@@ -53,8 +53,9 @@ function Get-TestCaseFilePath {
     throw @"
 Test case JSON not found at: $defaultPath
 
-Run Get-QTestCase.ps1 -TcNumber $Number -SaveToFile, or copy examples/sample-qtest-case.json to:
+Run Get-QTestCase.ps1 or Get-AzureTestCase.ps1 -TcNumber $Number -SaveToFile, or copy an example JSON to:
   test-resources/sample-test-cases/$fileName
+  (examples/sample-qtest-case.json or examples/sample-azure-test-case.json)
 
 Use -TestCasePath to point at a specific JSON file.
 "@
