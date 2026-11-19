@@ -1,0 +1,59 @@
+{
+    "tcNumber":  "TC-1234",
+    "source":  "azure",
+    "prUrl":  "https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42",
+    "testFilePath":  "tests/login.spec.ts",
+    "automationStatus":  "Automated",
+    "dryRun":  true,
+    "note":  "AI automation traceability for TC-1234\nPR: https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42\nTest file: tests/login.spec.ts\nCommit: abc123\nUpdated: 2026-11-19T03:57:22.2233436Z",
+    "testCaseUpdate":  {
+                           "platform":  "azure",
+                           "workItemId":  12345,
+                           "patchOps":  [
+                                            {
+                                                "path":  "/fields/Microsoft.VSTS.TCM.AutomationStatus",
+                                                "op":  "add",
+                                                "value":  "Automated"
+                                            },
+                                            {
+                                                "path":  "/fields/System.History",
+                                                "op":  "add",
+                                                "value":  "AI automation traceability for TC-1234\nPR: https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42\nTest file: tests/login.spec.ts\nCommit: abc123\nUpdated: 2026-11-19T03:57:22.2475828Z"
+                                            },
+                                            {
+                                                "path":  "/fields/Microsoft.VSTS.TCM.AutomatedTestName",
+                                                "op":  "add",
+                                                "value":  "TC-1234"
+                                            },
+                                            {
+                                                "path":  "/fields/Microsoft.VSTS.TCM.AutomatedTestStorage",
+                                                "op":  "add",
+                                                "value":  "tests/login.spec.ts"
+                                            },
+                                            {
+                                                "path":  "/fields/System.Tags",
+                                                "op":  "add",
+                                                "value":  "TC-1234"
+                                            },
+                                            {
+                                                "path":  "/relations/-",
+                                                "op":  "add",
+                                                "value":  {
+                                                              "url":  "https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42",
+                                                              "attributes":  {
+                                                                                 "comment":  "Automation PR for TC-1234"
+                                                                             },
+                                                              "rel":  "Hyperlink"
+                                                          }
+                                            }
+                                        ],
+                           "alreadyLinked":  false,
+                           "dryRun":  true
+                       },
+    "pullRequestUpdate":  {
+                              "platform":  "azure-pr",
+                              "pullRequestId":  42,
+                              "dryRun":  true
+                          },
+    "updatedAt":  "2026-11-19T03:57:22.2268551Z"
+}

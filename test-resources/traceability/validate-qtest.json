@@ -1,0 +1,29 @@
+{
+    "tcNumber":  "TC-1234",
+    "source":  "qtest",
+    "prUrl":  "https://github.com/org/repo/pull/42",
+    "testFilePath":  "tests/login.spec.ts",
+    "automationStatus":  "Automated",
+    "dryRun":  true,
+    "note":  "AI automation traceability for TC-1234\nPR: https://github.com/org/repo/pull/42\nTest file: tests/login.spec.ts\nUpdated: 2026-11-19T03:57:22.4790659Z",
+    "testCaseUpdate":  {
+                           "platform":  "qtest",
+                           "testCaseId":  98765,
+                           "comment":  {
+                                           "content":  "AI automation traceability for TC-1234\u003cbr/\u003ePR: https://github.com/org/repo/pull/42\u003cbr/\u003eTest file: tests/login.spec.ts\u003cbr/\u003eUpdated: 2026-11-19T03:57:22.4905804Z"
+                                       },
+                           "propertyUpdates":  [
+
+                                               ],
+                           "plannedFields":  [
+                                                 "Type"
+                                             ],
+                           "dryRun":  true
+                       },
+    "pullRequestUpdate":  {
+                              "platform":  "github-pr",
+                              "pullRequestId":  42,
+                              "dryRun":  true
+                          },
+    "updatedAt":  "2026-11-19T03:57:22.4790659Z"
+}

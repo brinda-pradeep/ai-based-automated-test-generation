@@ -30,12 +30,14 @@ ai-based-automated-test-generation
 ├── scripts
 │   ├── Get-QTestCase.ps1               Fetch and normalize a test case from qTest
 │   ├── Get-AzureTestCase.ps1           Fetch and normalize a test case from Azure DevOps
-│   └── Generate-AiPrompts.ps1          Analyze the repository and build the prompt chain
+│   ├── Generate-AiPrompts.ps1          Analyze the repository and build the prompt chain
+│   └── Update-TestCaseTraceability.ps1 Write automation status + PR link back to the TMS
 ├── prompts
 │   └── test-generation-prompts.md      Prompt templates and the rationale for each stage
 ├── examples
 │   ├── sample-qtest-case.json          Normalized qTest sample (offline input)
-│   └── sample-azure-test-case.json     Normalized Azure DevOps sample (offline input)
+│   ├── sample-azure-test-case.json     Normalized Azure DevOps sample (offline input)
+│   └── sample-traceability-result.json Example write-back summary
 ```
 
 ## Supported frameworks
@@ -118,6 +120,13 @@ $env:AZURE_DEVOPS_PRECONDITION_FIELD = 'Custom.Preconditions'
 #       PROMPT 4 validate       -> the assistant runs the test and fixes failures
 
 # 4. Run the test yourself before committing.
+
+# 5. After the PR exists, write automation status + PR link back to the TMS
+.\scripts\Update-TestCaseTraceability.ps1 `
+  -TcNumber TC-1234 `
+  -PrUrl 'https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42' `
+  -TestFilePath 'tests/login.spec.ts' `
+  -UpdatePullRequest
 ```
 
 No test management access? Copy [`examples/sample-qtest-case.json`](examples/sample-qtest-case.json) or [`examples/sample-azure-test-case.json`](examples/sample-azure-test-case.json) to `test-resources/sample-test-cases/tc-1234.json` (create the folder if needed) and start at step 2. Step 2 fails if that file is missing for the given `-TcNumber`.
@@ -156,6 +165,37 @@ The AI generates test scripts in a staged process:
 ### 4. Review and refine
 
 Each stage produces a small, reviewable artifact. This ensures that any errors or misinterpretations are caught early in the process, reducing the risk of introducing unmaintainable code.
+
+### 5. Traceability write-back
+
+After the automated test lands in a pull request, `Update-TestCaseTraceability.ps1` closes the loop with the test management system:
+
+| Platform | What gets updated |
+|----------|-------------------|
+| Azure DevOps | `Microsoft.VSTS.TCM.AutomationStatus` (default `Automated`), `AutomatedTestName`, optional `AutomatedTestStorage`, history note, `System.Tags` with the tc number, and a hyperlink relation to the PR |
+| qTest | Comment containing the PR URL / test file / commit, Type set to `Automation` when that allowed value exists, plus optional custom fields |
+
+Optional `-UpdatePullRequest` also appends `Traceability: TC-####` to the PR description (Azure DevOps REST, or GitHub via the `gh` CLI).
+
+```powershell
+# Preview payloads without writing
+.\scripts\Update-TestCaseTraceability.ps1 -TcNumber TC-1234 `
+  -PrUrl 'https://github.com/org/repo/pull/42' -TestFilePath 'tests/login.spec.ts' -DryRun
+
+# Force a platform when Auto cannot infer from saved JSON / env vars
+.\scripts\Update-TestCaseTraceability.ps1 -TcNumber TC-1234 -Source qtest `
+  -PrUrl 'https://github.com/org/repo/pull/42' -UpdatePullRequest
+```
+
+qTest custom field mapping (optional):
+
+```powershell
+$env:QTEST_AUTOMATION_STATUS_FIELD = 'Automation Status'   # field label in qTest
+$env:QTEST_AUTOMATION_STATUS_VALUE = 'Automated'
+$env:QTEST_AUTOMATION_LINK_FIELD   = 'Automation Link'     # stores the PR URL
+```
+
+A JSON summary is written to `test-resources/traceability/{tc-number}-traceability.json` (see [`examples/sample-traceability-result.json`](examples/sample-traceability-result.json)).
 
 ---
 

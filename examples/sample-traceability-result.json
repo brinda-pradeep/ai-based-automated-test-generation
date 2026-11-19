@@ -1,0 +1,23 @@
+{
+  "tcNumber": "TC-1234",
+  "source": "azure",
+  "prUrl": "https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42",
+  "testFilePath": "tests/login.spec.ts",
+  "automationStatus": "Automated",
+  "dryRun": false,
+  "note": "AI automation traceability for TC-1234\nPR: https://dev.azure.com/yourorg/YourProject/_git/your-tests/pullrequest/42\nTest file: tests/login.spec.ts\nUpdated: 2026-11-19T03:45:00.0000000Z",
+  "testCaseUpdate": {
+    "platform": "azure",
+    "workItemId": 12345,
+    "alreadyLinked": false,
+    "dryRun": false,
+    "revision": 4,
+    "url": "https://dev.azure.com/yourorg/YourProject/_workitems/edit/12345"
+  },
+  "pullRequestUpdate": {
+    "platform": "azure-pr",
+    "pullRequestId": 42,
+    "skipped": false
+  },
+  "updatedAt": "2026-11-19T03:45:00.0000000Z"
+}

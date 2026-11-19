@@ -1,0 +1,50 @@
+{
+  "source": "qtest",
+  "tcNumber": "TC-1234",
+  "id": 98765,
+  "name": "User can log in with valid credentials",
+  "description": "Verify that an authenticated user can access the dashboard after entering valid credentials on the login page.",
+  "preconditions": [
+    {
+      "key": "Environment",
+      "value": "Staging"
+    },
+    {
+      "key": "Test user",
+      "value": "automation.user@example.com / Password123!"
+    },
+    {
+      "key": "Application state",
+      "value": "User account exists and is active"
+    }
+  ],
+  "steps": [
+    {
+      "order": 1,
+      "description": "Navigate to the application login page",
+      "expected": "Login page is displayed with username and password fields"
+    },
+    {
+      "order": 2,
+      "description": "Enter valid username and password",
+      "expected": "Credentials are accepted in the respective fields"
+    },
+    {
+      "order": 3,
+      "description": "Click the Sign In button",
+      "expected": "User is redirected to the dashboard"
+    },
+    {
+      "order": 4,
+      "description": "Verify the dashboard header displays the logged-in username",
+      "expected": "Dashboard shows welcome message with the authenticated user's display name"
+    }
+  ],
+  "metadata": {
+    "priority": "High",
+    "type": "Functional",
+    "status": "Approved",
+    "version": "1.0",
+    "fetchedAt": "2026-08-16T14:00:00Z"
+  }
+}
